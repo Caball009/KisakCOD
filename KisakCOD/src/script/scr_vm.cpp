@@ -1703,7 +1703,6 @@ VariableStackBuffer *__cdecl VM_ArchiveStack()
     VariableStackBuffer *stackValue; // [esp+0h] [ebp-18h]
     VariableValue *top; // [esp+4h] [ebp-14h]
     char *buf; // [esp+8h] [ebp-10h]
-    char *bufa; // [esp+8h] [ebp-10h]
     unsigned int localId; // [esp+Ch] [ebp-Ch]
     int size; // [esp+10h] [ebp-8h]
     int bufLen; // [esp+14h] [ebp-4h]
@@ -1727,21 +1726,21 @@ VariableStackBuffer *__cdecl VM_ArchiveStack()
     buf = &stackValue->buf[5 * size];
     while (size)
     {
-        bufa = buf - 4;
+        buf -= 4;
         if (top->type == VAR_CODEPOS)
         {
             --scrVmPub.function_count;
             --scrVmPub.function_frame;
             //*bufa = scrVmPub.function_frame->fs.pos;
-            *(intptr_t *)bufa = (intptr_t)scrVmPub.function_frame->fs.pos;
+            *(uintptr_t *)buf = (uintptr_t)scrVmPub.function_frame->fs.pos;
             scrVmPub.localVars -= scrVmPub.function_frame->fs.localVarCount;
             localId = GetParentLocalId(localId);
         }
         else
         {
-            *bufa = top->u.intValue;
+            *(uintptr_t*)buf = top->u.pointerValue;
         }
-        buf = bufa - 1;
+        --buf;
         if (top->type >= 0x100u)
             MyAssertHandler(".\\script\\scr_vm.cpp", 2805, 0, "%s", "top->type >= 0 && top->type < (1 << 8)");
         *buf = top->type;
@@ -1977,11 +1976,13 @@ unsigned int VM_ExecuteInternal()
     if (profileEnable[0])
         Profile_BeginScripts(profileEnable[0]);
     profileEnablePos = &profileEnable[0];
+
     ++g_script_error_level;
+    iassert(g_script_error_level <= 32);
 
     //gParamCount = 0;
 #pragma region ERROR_CHECKER
-    if (setjmp(g_script_error[++g_script_error_level]))
+    if (setjmp(g_script_error[g_script_error_level]))
     {
         switch (opcode)
         {
@@ -2286,6 +2287,7 @@ interrupt_return:
             parentLocalId = GetSafeParentLocalId(fs.localId);
             Scr_KillThread(fs.localId);
             scrVmPub.localVars -= fs.localVarCount;
+            iassert(fs.top->type != VAR_PRECODEPOS);
             while (fs.top->type != VAR_CODEPOS)
             {
                 RemoveRefToValue(fs.top);
@@ -2560,7 +2562,7 @@ evalarray:
             goto evalarrayref;
 
         case OP_EvalLocalArrayRefCached:
-            fieldValueId = scrVmPub.localVars[-*(fs.pos++)];
+            fieldValueId = Scr_GetLocalVar(fs.pos++);
             goto evalarrayref;
 
         case OP_EvalArrayRef:
@@ -2603,7 +2605,7 @@ evalarrayref:
             objectId = Scr_GetSelf(fs.localId);
             if (IsFieldObject(objectId))
                 continue;
-            Scr_Error(va("%s is not an object", var_typename[GetValueType(objectId)]));
+            Scr_Error(va("%s is not an object", var_typename[GetObjectType(objectId)]));
 
         case OP_EvalLevelFieldVariable:
             objectId = scrVarPub.levelId;
@@ -2626,7 +2628,7 @@ EvalAnimFieldVariable:
             }
             INC_TOP();
             Scr_ReadUnsignedShort(&fs.pos);
-            Scr_Error(va("%s is not an object", var_typename[GetValueType(objectId)]));
+            Scr_Error(va("%s is not an object", var_typename[GetObjectType(objectId)]));
 
         case OP_EvalFieldVariable:
 EvalFieldVariable:
@@ -2669,7 +2671,7 @@ SafeSetVariableFieldCached0:
             iassert(fs.top->type != VAR_CODEPOS);
             if (fs.top->type != VAR_PRECODEPOS)
             {
-                goto LABEL_236;
+                goto setlocalvariablefieldcached0;
             }
             continue;
 
@@ -2677,7 +2679,7 @@ SafeSetVariableFieldCached0:
             iassert(fs.top->type != VAR_CODEPOS);
             if (fs.top->type != VAR_PRECODEPOS)
             {
-                goto LABEL_236;
+                goto setlocalvariablefieldcached;
             }
             ++fs.pos;
             continue;
@@ -2686,7 +2688,7 @@ SafeSetVariableFieldCached0:
             iassert(fs.top->type != VAR_CODEPOS);
             if (fs.top->type != VAR_CODEPOS)
             {
-                goto LABEL_236;
+                goto setlocalvariablefieldcached;
             }
             ClearVariableValue(Scr_GetLocalVar(fs.pos));
             ++fs.pos;
@@ -2766,17 +2768,18 @@ LN403:
                 SetVariableFieldValue(fieldValueId, fs.top);
             }
 
-            SetVariableFieldValue(fieldValueId, fs.top);
+            // SetVariableFieldValue(fieldValueId, fs.top);
             --fs.top;
             continue;
 
         case OP_SetLocalVariableFieldCached0:
+setlocalvariablefieldcached0:
             SetVariableValue(scrVmPub.localVars[0], fs.top);
             --fs.top;
             continue;
 
         case OP_SetLocalVariableFieldCached:
-LABEL_236:
+setlocalvariablefieldcached:
             SetVariableValue(Scr_GetLocalVar(fs.pos), fs.top);
             ++fs.pos;
             --fs.top;
@@ -2838,7 +2841,7 @@ CallBuiltinMethod:
                 Scr_Error(va("%s is not an entity", var_typename[fs.top->type]));
             }
             objectId = fs.top->u.pointerValue;
-            if (GetValueType(objectId) == VAR_ENTITY)
+            if (GetObjectType(objectId) == VAR_ENTITY)
             {
                 entref = Scr_GetEntityIdRef(objectId);
                 RemoveRefToObject(objectId);
@@ -2892,7 +2895,7 @@ post_builtin:
             }
             RemoveRefToObject(objectId);
             scrVarPub.error_index = -1;
-            Scr_Error(va("%s is not an entity", var_typename[GetValueType(objectId)]));
+            Scr_Error(va("%s is not an entity", var_typename[GetObjectType(objectId)]));
 
         case OP_wait: // VoroN: use sv_fps here??
             if (fs.top->type == VAR_FLOAT)
@@ -3410,7 +3413,7 @@ function_call:
             if (!IsFieldObject(fs.top->u.pointerValue))
             {
                 scrVarPub.error_index = 2;
-                Scr_Error(va("%s is not an object", var_typename[GetValueType(fs.top->u.pointerValue)]));
+                Scr_Error(va("%s is not an object", var_typename[GetObjectType(fs.top->u.pointerValue)]));
             }
             tempValue.u = fs.top->u;
             --fs.top;
@@ -3452,7 +3455,7 @@ function_call:
             if (!IsFieldObject(id))
             {
                 scrVarPub.error_index = 2;
-                Scr_Error(va("%s is not an object", var_typename[GetValueType(fs.top->u.pointerValue)]));
+                Scr_Error(va("%s is not an object", var_typename[GetObjectType(fs.top->u.pointerValue)]));
             }
             --fs.top;
             if (fs.top->type != VAR_STRING)
@@ -3489,7 +3492,7 @@ function_call:
             if (!IsFieldObject(fs.top->u.pointerValue))
             {
                 scrVarPub.error_index = 1;
-                Scr_Error(va("%s is not an object", var_typename[GetValueType(fs.top->u.pointerValue)]));
+                Scr_Error(va("%s is not an object", var_typename[GetObjectType(fs.top->u.pointerValue)]));
             }
             if (fs.top[-1].type == VAR_STRING)
             {
