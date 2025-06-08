@@ -11,3 +11,8 @@ IDA/*
 *.exe
 *.bak
 KisakCOD/KisakCOD.vcxproj.user
+
+tools/revision.txt
+build/
+src/version.h
+gamepath.txt
