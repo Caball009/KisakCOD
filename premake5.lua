@@ -95,7 +95,7 @@ end
 
 local function DoPostbuild()
     -- read gamepath.txt into gamePath
-	local gamePath = io.readfile(os.getcwd() .. "/tools/revision.txt")
+    local gamePath = io.readfile(os.getcwd() .. "/tools/revision.txt")
     local cwd = os.getcwd()
 
     -- copy dlls from dlls/ to gamePath 
@@ -119,6 +119,9 @@ local function DoPostbuild()
     postbuildcommands({
         'copy/y "$(TargetPath)" "' .. gamePath .. '"'
     })
+
+    -- just do this here since we have gamePath already lol
+    debugdir(gamePath)
 end
 
 systemversion("10.0.22621.0")
@@ -159,7 +162,7 @@ project("KisakCOD")
 
     conformancemode("off")
     rtti("off")
-    dpiawareness("HighPerMonitor")
+    --dpiawareness("HighPerMonitor")
 
     vectorextensions("SSE3")
 

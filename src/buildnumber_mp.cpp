@@ -2,16 +2,17 @@
 
 #include "buildnumber_mp.h"
 #include <stdio.h>
+#include <version.h>
 
 char buildnumbuf[128];
 
 char *__cdecl getBuildNumber()
 {
-	sprintf_s(buildnumbuf, "%d %s", 13620, "Thu Oct 04 00:43:04 2007");
+	sprintf_s(buildnumbuf, "%d %s %s", VERSION_NUMBER, VERSION_HOST, VERSION_STRING);
 	return buildnumbuf;
 }
 
 int getBuildNumberAsInt()
 {
-	return 13620;
+	return VERSION_NUMBER;
 }

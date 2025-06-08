@@ -1,4 +1,5 @@
 #include <stdafx.h>
+#include <version.h>
 
 #include "client.h"
 #include <qcommon/mem_track.h>
@@ -2821,7 +2822,7 @@ void __cdecl Con_DrawInput(int localClientNum)
         MyAssertHandler(".\\client\\cl_console.cpp", 2163, 0, "%s", "Sys_IsMainThread() || Sys_IsRenderThread()");
     if (Key_IsCatcherActive(localClientNum, 1) && Sys_IsMainThread())
     {
-        promptString = va("%s: %s> ", "CoD4 MP", "1.0");
+        promptString = va("%s: %s> ", "CoD4 MP", "1." VERSION_NUMBER_STRING);
         conDrawInputGlob.fontHeight = (float)R_TextHeight(cls.consoleFont);
         conDrawInputGlob.x = con.screenMin[0] + 6.0;
         conDrawInputGlob.y = con.screenMin[1] + 6.0;
