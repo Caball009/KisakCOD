@@ -2,7 +2,7 @@
 
 #include "directsound.h"
 
-#include <speex/speex.h>
+#include <speex.h>
 #include <qcommon/qcommon.h>
 #include <server_mp/server.h>
 

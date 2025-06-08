@@ -1,6 +1,31 @@
 local revision = require("tools/revision")
 revision.update()
 
+local submodule = require("tools/submodule")
+submodule.define({
+    name = "zlib",
+    libmode = "staticlib",
+    files = {
+        "vendor/zlib/*.c",
+        "vendor/zlib/*.h",
+    },
+    includes = {
+        "vendor/zlib"
+    }
+})
+
+submodule.define({
+    name = "speex",
+    libmode = "staticlib",
+    files = {
+        "vendor/speex/*.c",
+        "vendor/speex/*.h",
+    },
+    includes = {
+        "vendor/speex"
+    }
+})
+
 local function ConfigurationOptions()
     configurations({
         "Debug Vanilla",
@@ -59,25 +84,32 @@ local function DX9SDK()
     filter("platforms:x64")
         libdirs({ "vendor/dxsdk/Lib/x64" })
 
-    filter("")
+    filter("configurations:Debug*")
+        links({ "d3dx9d" })
+
+    filter("configurations:Release*")
+        links({ "d3dx9" })
+
+    filter({})
 end
 
 local function DoPostbuild()
     -- read gamepath.txt into gamePath
 	local gamePath = io.readfile(os.getcwd() .. "/tools/revision.txt")
+    local cwd = os.getcwd()
 
     -- copy dlls from dlls/ to gamePath 
     if os.istarget("windows") then
         postbuildcommands({
-            'copy/y dlls\\mss32.dll "' .. gamePath .. '\\mss32.dll"',
-            'copy/y dlls\\miles\\milesEq.flt "' .. gamePath .. '\\miles\\milesEq.flt"',
-            'copy/y dlls\\miles\\mssdolby.flt "' .. gamePath .. '\\miles\\mssdolby.flt"',
-            'copy/y dlls\\miles\\mssds3d.flt "' .. gamePath .. '\\miles\\mssds3d.flt"',
-            'copy/y dlls\\miles\\mssdsp.flt "' .. gamePath .. '\\miles\\mssdsp.flt"',
-            'copy/y dlls\\miles\\msseax.flt "' .. gamePath .. '\\miles\\msseax.flt"',
-            'copy/y dlls\\miles\\mssmp3.asi "' .. gamePath .. '\\miles\\mssmp3.asi"',
-            'copy/y dlls\\miles\\msssrs.flt "' .. gamePath .. '\\miles\\msssrs.flt"',
-            'copy/y dlls\\miles\\mssvoice.asi "' .. gamePath .. '\\miles\\mssvoice.asi"',
+            'copy/y "' .. cwd .. '\\dlls\\mss32.dll" "' .. gamePath .. '\\mss32.dll"',
+            'copy/y "' .. cwd .. '\\dlls\\miles\\milesEq.flt" "' .. gamePath .. '\\miles\\milesEq.flt"',
+            'copy/y "' .. cwd .. '\\dlls\\miles\\mssdolby.flt" "' .. gamePath .. '\\miles\\mssdolby.flt"',
+            'copy/y "' .. cwd .. '\\dlls\\miles\\mssds3d.flt" "' .. gamePath .. '\\miles\\mssds3d.flt"',
+            'copy/y "' .. cwd .. '\\dlls\\miles\\mssdsp.flt" "' .. gamePath .. '\\miles\\mssdsp.flt"',
+            'copy/y "' .. cwd .. '\\dlls\\miles\\msseax.flt" "' .. gamePath .. '\\miles\\msseax.flt"',
+            'copy/y "' .. cwd .. '\\dlls\\miles\\mssmp3.asi" "' .. gamePath .. '\\miles\\mssmp3.asi"',
+            'copy/y "' .. cwd .. '\\dlls\\miles\\msssrs.flt" "' .. gamePath .. '\\miles\\msssrs.flt"',
+            'copy/y "' .. cwd .. '\\dlls\\miles\\mssvoice.asi" "' .. gamePath .. '\\miles\\mssvoice.asi"',
         })
     else
         -- TODO: linux variant (good luck sourcing the sos)
@@ -145,16 +177,52 @@ project("KisakCOD")
     pchheader("stdafx.h")
     pchsource("src/stdafx.cpp")
 
-    links({ "ws2_32", "d3d9" })
+    DX9SDK()
+    libdirs({ "src/msslib" })
+    links({ "mss32", "dsound", "ddraw", "dxguid", "ws2_32", "d3d9",  "winmm" })
+    submodule.include({ "zlib", "speex" })
 
     files({
+        "src/**.c",
         "src/**.cpp",
         "src/**.hpp",
         "src/**.h",
     })
 
+    filter({ "files:**.c" })
+        compileas("C++")
+
+    filter({})
+
     removefiles({
-        "src/physics/ode/stack.cpp"
+        "src/gfx_d3d/r_model_skin_sse.cpp",
+
+        "src/script/scr_compiler.cpp",
+        "src/script/scr_yacc.cpp",
+
+        "src/physics/ode/array.cpp",
+        "src/physics/ode/array.h",
+        "src/physics/ode/collision_trimesh.cpp",
+        "src/physics/ode/collision_trimesh_ccylinder.cpp",
+        "src/physics/ode/collision_trimesh_distance.cpp",
+        "src/physics/ode/collision_trimesh_ray.cpp",
+        "src/physics/ode/collision_trimesh_sphere.cpp",
+        "src/physics/ode/collision_trimesh_trimesh.cpp",
+        "src/physics/ode/lcp.cpp",
+        "src/physics/ode/lcp.h",
+        "src/physics/ode/mat.cpp",
+        "src/physics/ode/mat.h",
+        "src/physics/ode/memory.cpp",
+        "src/physics/ode/obstack.cpp",
+        "src/physics/ode/odeext.h",
+        "src/physics/ode/odemisc.cpp",
+        "src/physics/ode/stack.cpp",
+        "src/physics/ode/step.cpp",
+        "src/physics/ode/step.h",
+        "src/physics/ode/stepfast.cpp",
+        "src/physics/ode/testing.cpp",
+        "src/physics/ode/testing.h",
     })
 
-    DX9SDK()
+group("vendor")
+    submodule.register_all()

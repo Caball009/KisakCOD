@@ -5,7 +5,7 @@
 #include <qcommon/qcommon.h>
 
 #include <qcommon/threads.h>
-#include <zlib/zlib.h>
+#include <zlib.h>
 
 static int g_cacheSize;
 static int g_nonZeroCount;

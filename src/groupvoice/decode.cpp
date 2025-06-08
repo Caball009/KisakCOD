@@ -1,7 +1,7 @@
 #include <stdafx.h>
 
 #include "directsound.h"
-#include <speex/speex.h>
+#include <speex.h>
 #include <qcommon/qcommon.h>
 
 void *g_decoder;

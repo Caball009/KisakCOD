@@ -1,6 +1,6 @@
 #pragma once
 
-#include <zlib/zlib.h>
+#include <zlib.h>
 
 #include <cstddef>
 

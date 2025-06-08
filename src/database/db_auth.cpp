@@ -2,7 +2,7 @@
 
 #include "database.h"
 
-#include <zlib/zlib.h>
+#include <zlib.h>
 
 // Note: On XBox it seems to use tomcrypt, and is more involved. 
 

@@ -1,3 +1,5 @@
+#include <stdafx.h>
+
 /* generated code, do not edit. */
 
 #include "ode/matrix.h"
